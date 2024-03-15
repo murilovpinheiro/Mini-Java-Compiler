@@ -1,0 +1,289 @@
+options {
+    IGNORE_CASE = true;
+}
+// Simple Parser Declaration
+PARSER_BEGIN(Parser)
+public class Parser {
+    public static void main (String args[]){
+        Parser parser;
+
+        if (args.length == 0){
+            System.out.println("Reading the Input...");
+            parser = new Parser(System.in);
+        }
+        else if (args.length == 1){
+            try{
+                System.out.println("Reading the Archive Input...");
+                parser = new Parser(new java.io.FileInputStream(args[0]));
+            }
+            catch(java.io.FileNotFoundException e) {
+                System.out.println("Archive not found.");
+                return;
+            }
+        }
+        else{
+            System.out.println("Out of Pattern!");
+            return;
+        }
+        try{
+            //parser.Program();
+            System.out.println("Succesfull Reading !!!\nShowing Tokens...\n");
+
+            Token token;
+            while((token = parser.getNextToken()).kind != 0){
+                System.out.println(token.image);
+            }
+        }
+        catch(TokenMgrError e){
+            System.out.println("Unsuccessful Reading. Showing Error Message:");
+            System.out.println(e.getMessage());
+        }
+    }
+}
+PARSER_END(Parser)
+
+// Tokens Declaration - Lexical Parser
+
+TOKEN : {
+       // Basic Definitions: Letters and Digits
+        <#LETTER: (["a" - "z", "A" - "Z"])>
+       |<#DIGIT: (["0" - "9"])>
+
+       // Special Chars, commas, colons, brackets, etc.
+       |<SCOLON: (";")>
+       |<COMMA: (",")>
+       |<DOT: (".")>
+       |<LPAR: ("(")>
+       |<RPAR: (")")>
+       |<LBRACKET: ("[")>
+       |<RBRACKET: ("]")>
+       |<LBRACE: ("{")>
+       |<RBRACE: ("}")>
+
+       // Key Words
+
+       |<IF: ("if")>
+       |<ELSE: ("else")>
+       |<WHILE: ("while")>
+       |<NEW: ("new")>
+       |<LENGTH: ("length")>
+       |<PRINT: ("System.out.println")>
+       |<PUBLIC: ("public")>
+       |<STATIC: ("static")>
+       |<VOID: ("void")>
+       |<MAIN: ("main")>
+       |<CLASS: ("class")>
+       |<EXTENDS: ("extends")>
+       |<RETURN: ("return")>
+       // maybe has others
+
+       // Boolean States
+       |<TRUE: ("true")>
+       |<FALSE: ("false")>
+
+       // Operators
+       |<PLUS: ("+")>
+       |<MINUS: ("-")>
+       |<MULT: ("*")>
+       |<LAND: ("&&")>
+       |<LOR: ("||")>
+       |<LNOT: ("!")>
+       |<SMALLER: ("<")>
+       |<GREATER: (">")>
+       |<EQUAL: ("=")>
+
+       // Type Names
+       |<INT: ("int")>
+       |<BOOLEAN: ("boolean")>
+       |<STRING: ("String")>
+       // maybe add others operators as == and others
+
+       // Num: Sequence of 1 or more Digits
+       |<NUM: (<DIGIT>)+>
+
+       // Variables, classes, objects, etc identifications
+       // examples: a, ab, b1, z_
+       |<ID: <LETTER> (<LETTER> | <DIGIT> | "_")*>
+}
+
+SKIP : {
+        " "
+        | "\t"
+        | "\n"
+        | "\r"
+        | <"//" (~["\n"])*>
+        | <"/*" (~["*"])* "*" (~["/"] (~["*"])* "*")* "/">
+}
+
+// Expressions Declaration - Syntax Parser
+
+// The Program Method is the where you denote the outer structure of the mini java code
+// Basically the program has two parts: The Main Class and Other Classes
+// The MainClass() obsviously capture the tokens of the class with the function static main
+// and all other classes in the program are captured in OthersClasses()
+
+void Program():
+{}
+{
+    MainClass() (OthersClasses())*
+}
+
+//Method responsible for capturing the MainClass defined in the format:
+    // class <class_name> {
+    // public static void main ( String[] <name_of_list>)
+    // {<CODE>}
+    // }
+
+void MainClass():
+{}
+{
+    <CLASS> <ID> <LBRACE> <PUBLIC> <STATIC> <VOID> <MAIN>
+    <LPAR> <STRING> <LBRACKET> <RBRACKET> <ID> <RPAR> <LBRACE>
+    Statement() <RBRACE> <RBRACE>
+}
+
+//This method captures all classes in the code, except for the main, the format is:
+    // class <class_name>{
+    //  Attributes;
+    //  Methods;
+    // }
+// Or in the format:
+    // class <class_name> extends <superclass_name>{
+    //  Attributes;
+    //  Methods;
+    // }
+
+void OthersClasses():
+{}
+{
+
+    LOOKAHEAD(3)
+    <CLASS> <ID> <LBRACE> (AttrDefinition())* (MethodDefinition())* <RBRACE>
+    | <CLASS> <ID> <EXTENDS> <ID> <LBRACE> (AttrDefinition())* (MethodDefinition())* <RBRACE>
+}
+
+// Attribute Definition, denoted by the format:
+//  type(int, int[], bool or object(denoted by <ID>)) <attr_name> ;
+
+void AttrDefinition():
+{}
+{
+    Type() <ID> <SCOLON>
+}
+
+//Method Definition, in format:
+//  public type <method_name>(<parameters>){
+//      Attributes;
+//      <CODE>
+//      return <Expression>;
+//  }
+void MethodDefinition():
+{}
+{
+    <PUBLIC> Type() <ID> <LPAR> ParametersList() <RPAR> <LBRACE> (LOOKAHEAD(2) AttrDefinition())* (Statement())* <RETURN> Expression() <SCOLON> <RBRACE>
+}
+
+// Function to check type tokens, classified in 4 possibilities:
+// array of int, int, boolean and a class name
+
+void Type():
+{}
+{
+    LOOKAHEAD(2)
+    <INT> <RBRACKET> <LBRACKET>
+    | <BOOLEAN>
+    | <INT>
+    | <ID>
+    // Maybe add Void
+}
+
+// Function to denote empty
+void Empty():
+{}
+{
+    {}
+}
+
+// Function Parameters list is used in the input of methods, can be multiples "int something" or just empty
+
+void ParametersList():
+{}
+{
+    Type() <ID> (OthersParameters())*
+    | Empty()
+}
+
+// Auxiliar function to create parameter list
+
+void OthersParameters():
+{}
+{
+    <COMMA> Type() <ID>
+}
+
+// Now we have the most importants part of the code:
+    // Statements and Expressions
+    // Statements are block of codes, if-else, while, prints, attributions, etc;
+    // Expression compose Statements where Expression are mathematical/boolean expressions.
+
+// This first function obtain the format of various differents Statements
+
+void Statement():
+{}
+{
+    LOOKAHEAD(2)
+    <LBRACE> (Statement())* <RBRACE>
+    |<IF> <LPAR> Expression() <RPAR> Statement() <ELSE> Statement()
+    |<WHILE> <LPAR> Expression() <RPAR> Statement()
+    |<PRINT> <LPAR> Expression() <RPAR> <SCOLON>
+    |LOOKAHEAD(2) <ID> <EQUAL> Expression() <SCOLON>
+    |LOOKAHEAD(2) <ID> <LBRACKET> Expression() <RBRACKET> <EQUAL> Expression() <SCOLON>
+}
+
+// To resolve the problem of Left-Recursion we built the structure (Expression -> Expression_final)
+// with this format we force Right-Recursion, avoiding the Left-Recursion problem
+
+// Obs: Probably the Expression_final is incomplete, but seems OK to first tests
+
+void Expression_Final():
+{}
+{
+    LOOKAHEAD(3)
+    <LAND> Expression_Final()
+    |<SMALLER> Expression_Final()
+    |<PLUS> Expression_Final()
+    |<MINUS> Expression_Final()
+    |<MULT> Expression_Final()
+    |<LBRACKET> Expression() <RBRACKET> Expression_Final()
+    |LOOKAHEAD(2) <DOT> <LENGTH> Expression_Final()
+    |LOOKAHEAD(2) <DOT> <ID> <LPAR> ExpressionList() <RPAR>
+    |Empty()
+}
+
+void Expression():
+{}
+{
+    <TRUE> Expression_Final()
+    | <FALSE> Expression_Final()
+    | <ID> Expression_Final()
+    //| <THIS> Expression_Final()
+    | <NUM> Expression_Final()
+    | LOOKAHEAD(2) <NEW> <INT> <LBRACKET> Expression() <RBRACKET> Expression_Final()
+    | LOOKAHEAD(2) <NEW> <ID> <LPAR> <RPAR> Expression_Final()
+    | <LNOT> Expression()
+    | <LPAR> Expression() <RPAR> Expression_Final()
+}
+
+//Auxiliar methods to have a list of Expressions to use as input in methods
+void ExpressionList():
+{}
+{
+    Expression() (ExpressionContinue())*
+    | Empty()
+}
+
+void ExpressionContinue():
+{}
+{
+    <COMMA> Expression()
+}
