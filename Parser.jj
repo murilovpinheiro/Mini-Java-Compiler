@@ -1,0 +1,396 @@
+
+PARSER_BEGIN(Parser)
+
+import syntaxtree.*;
+import syntaxtree.visitor.*;
+import syntaxtree.*;
+import syntaxtree.visitor.*;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
+
+// Novos métodos de análise do código, análise sintática e léxica
+
+public class Parser {
+    public static void main (String args[]) {
+        Parser parser;
+
+        if (args.length == 0){
+            System.out.println("Reading the Input...");
+            parser = new Parser(System.in);
+        }
+        else if (args.length == 1){
+            try{
+                System.out.println("Reading the Archive Input...");
+                parser = new Parser(new java.io.FileInputStream(args[0]));
+            }
+            catch(java.io.FileNotFoundException e) {
+                System.out.println("Archive not found.");
+                return;
+            }
+        }
+        else{
+            System.out.println("Out of Pattern!");
+            return;
+        }
+        try{
+            Program prog = parser.Program();
+
+            DepthFirstVisitor table_visitor = new DepthFirstVisitor();
+            prog.accept(table_visitor);
+
+            TypeDepthFirstVisitor type_check = new TypeDepthFirstVisitor(table_visitor);
+            prog.accept(type_check);
+        }
+        catch(Exception e){
+            System.out.println("Unsuccessful Reading. Showing Error Message:");
+            System.out.println(e.getMessage());
+        }
+    }
+    private static void fullAnalysis(ArrayList<String> filenames) throws Exception {
+        Parser parser = new Parser(new StringReader(""));
+        for (String nome : filenames) {
+            try {
+                String file = readFile(nome);
+                parser.ReInit(new StringReader(file));
+
+                System.out.println("\nREADING " + nome + "\n");
+
+                List<Token> tokens = LexicalAnalyzer(parser, file);
+                String resultadoAnaliseSintatica = SyntaxAnalyzer(parser, file);
+                if (resultadoAnaliseSintatica.equals("")) {
+                    System.out.println("\n SYNTAX OK \n");
+                } else {
+                    System.out.println("\nSYNTAX ERROR: " + resultadoAnaliseSintatica + "\n");
+                }
+                parser.ReInit(new StringReader(file));
+            } catch (Exception e) {
+                System.out.println("ERROR: " + e.getCause());
+            }
+        }
+    }
+
+    private static ArrayList<Token> LexicalAnalyzer(Parser parser, String input) throws TokenMgrError {
+        parser.ReInit(new StringReader(input));
+        ArrayList<Token> tokens = new ArrayList<Token>();
+        try {
+            while (true) {
+                Token token = parser.getNextToken();
+                if (token.kind == 0) {
+                    break;
+                }
+                tokens.add(token);
+                //System.out.println("TOKEN: " + token.image);
+            }
+        } catch (TokenMgrError e) {
+            System.out.println("LEXICAL ERROR: " + e.getMessage());
+           for (Token token : tokens) {
+                System.out.println("ROW " + token.beginLine + ", COLUMN " + token.beginColumn +
+                        ": IMAGE: \"" + token.image + "\", KIND: " + token.kind);
+            }
+        }
+
+        return tokens;
+    }
+
+    private static String SyntaxAnalyzer(Parser parser, String input) {
+        String res = "";
+        try {
+            parser.ReInit(new StringReader(input));
+            parser.Program();
+            return res;
+        } catch (Throwable e) {
+            return e.getMessage();
+        }
+    }
+    private static String readFile(String filePath) throws Exception {
+        File file = new File(filePath);
+        BufferedReader reader = new BufferedReader(new FileReader(file));
+        String line;
+        StringBuilder stringBuilder = new StringBuilder();
+        while ((line = reader.readLine()) != null) {
+            stringBuilder.append(line);
+            stringBuilder.append(System.lineSeparator());
+        }
+        reader.close();
+        return stringBuilder.toString();
+    }
+}
+PARSER_END(Parser)
+
+// Tokens Declaration - Lexical Parser
+
+TOKEN : {
+       // Basic Definitions: Letters and Digits
+        <#LETTER: (["a" - "z", "A" - "Z"])>
+       |<#DIGIT: (["0" - "9"])>
+
+       // Special Chars, commas, colons, brackets, etc.
+       |<SCOLON: (";")>
+       |<COMMA: (",")>
+       |<DOT: (".")>
+       |<LPAR: ("(")>
+       |<RPAR: (")")>
+       |<LBRACKET: ("[")>
+       |<RBRACKET: ("]")>
+       |<LBRACE: ("{")>
+       |<RBRACE: ("}")>
+
+       // Key Words
+
+       |<IF: ("if")>
+       |<ELSE: ("else")>
+       |<WHILE: ("while")>
+       |<NEW: ("new")>
+       |<LENGTH: ("length")>
+       |<PRINT: ("System.out.println")>
+       |<PUBLIC: ("public")>
+       |<STATIC: ("static")>
+       |<VOID: ("void")>
+       |<MAIN: ("main")>
+       |<THIS: ("this")>       
+       |<CLASS: ("class")>
+       |<EXTENDS: ("extends")>
+       |<RETURN: ("return")>
+       // maybe has others
+
+       // Boolean States
+       |<TRUE: ("true")>
+       |<FALSE: ("false")>
+
+       // Operators
+       |<PLUS: ("+")>
+       |<MINUS: ("-")>
+       |<MULT: ("*")>
+       |<LAND: ("&&")>
+       |<LOR: ("||")>
+       |<LNOT: ("!")>
+       |<SMALLER: ("<")>
+       |<GREATER: (">")>
+       |<EQUAL: ("=")>
+
+       // Type Names
+       |<INT: ("int")>
+       |<BOOLEAN: ("boolean")>
+       |<STRING: ("String")>
+       // maybe add others operators as == and others
+
+       // Num: Sequence of 1 or more Digits
+       |<NUM: (<DIGIT>)+>
+
+       // Variables, classes, objects, etc identifications
+       // examples: a, ab, b1, z_
+       |<ID: <LETTER> (<LETTER> | <DIGIT> | "_")*>
+}
+
+SKIP :
+{ " "
+| "\t"
+| "\r"
+| "\n"
+| < "//" (~["\n","\r"])* ("\n" | "\r\n" | "\r") >
+| < "/*" (~[])* "*/" >}
+
+// Expressions Declaration - Syntax Parser
+
+// The Program Method is the where you denote the outer structure of the mini java code
+// Basically the program has two parts: The Main Class and Other Classes
+// The MainClass() obsviously capture the tokens of the class with the function static main
+// and all other classes in the program are captured in OthersClasses()
+
+// NENHUMA MUDANÇA
+
+Program Program() :
+{
+    MainClass main;
+    ClassDecl decl;
+    ClassDeclList classlist = new ClassDeclList();
+}
+{
+    main = MainClass()
+    (decl = ClassDeclaration() {classlist.addElement(decl);})*
+    <EOF>
+
+    {return new Program(main, classlist);}
+}
+
+// REFATORADO, mudei os BRACE e BRACKETS para os símbolos para manter mais legível,
+// havia erro no mainclass antigo abria e fechava parenteses de uma vez
+
+MainClass MainClass() :
+{
+    Identifier mcname, argname;
+    Statement code;
+}
+{
+    <CLASS> mcname = ID() "{"
+        <PUBLIC> <STATIC> <VOID> <MAIN> "(" <STRING> "[" "]" argname = ID() ")" "{"
+            code = Statement()
+        "}"
+    "}"
+
+    {return new MainClass(mcname, argname, code);}
+}
+
+//This method captures all classes in the code, except for the main, the format is:
+    // class <class_name>{
+    //  Attributes;
+    //  Methods;
+    // }
+// Or in the format:
+    // class <class_name> extends <superclass_name>{
+    //  Attributes;
+    //  Methods;
+    // }
+
+// REFATORADO, extends mudado para ficar menos código
+ClassDecl ClassDeclaration() :
+{
+    Identifier classname, superclass = null;
+    VarDecl vd; VarDeclList varlist = new VarDeclList();
+    MethodDecl md; MethodDeclList methodlist = new MethodDeclList();
+}
+{
+    <CLASS> classname = ID()
+    (<EXTENDS> superclass = ID())? "{"
+        (vd = VarDeclaration() {varlist.addElement(vd);})* (md = MethodDeclaration() {methodlist.addElement(md);})*
+    "}"
+
+    {if (superclass == null) return new ClassDeclSimple(classname, varlist, methodlist);
+    else return new ClassDeclExtends(classname, superclass, varlist, methodlist);}
+}
+
+// Attribute Definition, denoted by the format:
+//  type(int, int[], bool or object(denoted by <ID>)) <attr_name> ;
+
+// FEITO, nenhuma mudança
+
+VarDecl VarDeclaration() :
+{
+    Type t; Identifier i;
+}
+{
+    t = Type() i = ID() <SCOLON>
+
+    {return new VarDecl(t, i);}
+}
+
+//Method Definition, in format:
+//  public type <method_name>(<parameters>){
+//      Attributes;
+//      <CODE>
+//      return <Expression>;
+//  }
+
+// FEITO, mudei só o nome de algumas variáveis e reescrevi, mas no geral parece o mesmo
+MethodDecl MethodDeclaration() :
+{
+    Type t, others_t;
+    Identifier method_name, params_name;
+    Exp e;
+    MethodDecl md; VarDecl vd; Statement st;
+
+    FormalList formalist = new FormalList(); VarDeclList varlist = new VarDeclList(); StatementList statelist = new StatementList();
+}
+{
+    <PUBLIC> t = Type() method_name = ID() "("
+        (others_t = Type() params_name = ID() {formalist.addElement(new Formal(others_t, params_name));} ( "," others_t = Type() params_name = ID() {formalist.addElement(new Formal(others_t, params_name));})* )?
+    ")" "{"
+        (LOOKAHEAD(2) vd = VarDeclaration() {varlist.addElement(vd);})*
+        (st = Statement() {statelist.addElement(st);})*
+        "return" e = Expression() <SCOLON>
+    "}"
+    {return new MethodDecl(t, method_name, formalist, varlist, statelist, e);}
+}
+
+// Function to check type tokens, classified in 4 possibilities:
+// array of int, int, boolean and a class name
+
+// REFATORADO, mudei o LOOKAHEAD pra 3 de 2, resto igual
+Type Type() :
+{
+    Identifier id;
+}
+{
+    LOOKAHEAD(3)
+    <INT> "[" "]" {return new IntArrayType();}
+    | <BOOLEAN> {return new BooleanType();}
+    | <INT> {return new IntegerType();}
+    | id = ID() {return new IdentifierType(id.toString());}
+}
+
+
+
+Statement Statement() :
+{
+   Statement s, s2;
+   Exp e, e2; Identifier id;
+   StatementList sl = new StatementList();
+}
+{
+    "{" (s = Statement() {sl.addElement(s);})* "}" { return new Block(sl); }
+    | <IF> "(" e = Expression() ")" s = Statement() <ELSE> s2 = Statement() { return new If(e, s, s2); }
+    | <WHILE> "(" e = Expression() ")" s = Statement() { return new While(e, s); }
+    | <PRINT> "(" e = Expression() ")" <SCOLON> { return new Print(e); }
+    | LOOKAHEAD(2) // coloquei de 6 para 2
+      id = ID() "=" e = Expression() <SCOLON> { return new Assign(id, e); }
+    | id = ID() "[" e = Expression() "]" "=" e2 = Expression() <SCOLON> { return new ArrayAssign(id, e, e2); }
+}
+
+// TODA A PARTE DE EXPRESSÕES E DE REMOÇÃO DE LEFT-RECURSION FOI REFEITA DO 0
+// FIZEMOS MENOS MÉTODOS, MENOS CÓDIGO, O ANTIGO TAMBÉM ESTAVA INCOMPLETO E PARECIA NÃO FUNCIONAR EM ALGUNS CASOS.
+
+Exp Expression() :
+{
+    Exp e1;
+}
+{
+    e1 = Expression_value() (LOOKAHEAD(2) e1 = Expression_final(e1))*
+    { return e1; }
+}
+
+Exp Expression_value() :
+{
+    Exp e, e2;
+    Token t;
+    Identifier id;
+}
+{
+    <THIS> { e = new This(); return e; }
+    | <LNOT> e2 = Expression() { e = new Not(e2); return e; }
+    | <TRUE> { e = new True(); return e; }
+    | <FALSE> { e = new False(); return e; }
+    | t = <NUM> { e = new IntegerLiteral(Integer.parseInt(t.image)); return e; }
+    | id = ID() { e = new IdentifierExp(id.toString()); return e; }
+    | "(" e2 = Expression() ")" { e = e2; return e; }
+    | <NEW> id = ID() "(" ")" { e = new NewObject(id); return e; }
+    | LOOKAHEAD(2)
+          <NEW> <INT> "[" e2 = Expression() "]" { e = new NewArray(e2); return e; }
+}
+
+Exp Expression_final(Exp left_exp) :
+{
+    Exp right_exp; Exp final_exp;
+    Identifier id;
+    ExpList el = new ExpList();
+}
+{
+    <LAND> right_exp = Expression() { return new And(left_exp, right_exp); }
+    | <PLUS> right_exp = Expression() { return new Plus(left_exp, right_exp); }
+    | <SMALLER> right_exp = Expression() { return new LessThan(left_exp, right_exp); }
+    | <MINUS> right_exp = Expression() { return new Minus(left_exp, right_exp); }
+    | <MULT> right_exp = Expression() { return new Times(left_exp, right_exp); }
+    | "[" right_exp = Expression() "]" { return new ArrayLookup(left_exp, right_exp); }
+    | "." id = ID() "(" ( right_exp = Expression() { el.addElement(right_exp);}
+        ( "," right_exp = Expression() { el.addElement(right_exp);} )* )? ")" { return new Call(left_exp, id, el); }
+    | LOOKAHEAD(2)
+          "." <LENGTH> { return new ArrayLength(left_exp); }
+}
+
+// FEITO, nenhuma mudança
+Identifier ID() : {Token t;}
+{ t = <ID> {return new Identifier(t.image);}}
