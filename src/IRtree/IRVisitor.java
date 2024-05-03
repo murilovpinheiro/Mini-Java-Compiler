@@ -13,7 +13,7 @@ import syntaxtree.visitor.TypeDepthVisitor;
 import temp.*;
 import utils.Conversor;
 
- init Intermediate Visitor Class
+//Intermediate Visitor Class
 public class IRVisitor implements IRtree.Visitor {
 
     Stack<Frame> frames;
