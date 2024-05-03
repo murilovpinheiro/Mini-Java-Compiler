@@ -1,6 +1,7 @@
 package syntaxtree.visitor;
 
 import syntaxtree.*;
+import syntaxtree.Integer;
 
 public class PrettyPrintVisitor implements Visitor {
 
@@ -32,7 +33,7 @@ public class PrettyPrintVisitor implements Visitor {
     // Identifier i;
     // VarDeclList vl;
     // MethodDeclList ml;
-    public void visit(ClassDeclSimple n) {
+    public void visit(NormalClass n) {
         System.out.print("class ");
         n.i.accept(this);
         System.out.println(" { ");
@@ -53,7 +54,7 @@ public class PrettyPrintVisitor implements Visitor {
     // Identifier j;
     // VarDeclList vl;
     // MethodDeclList ml;
-    public void visit(ClassDeclExtends n) {
+    public void visit(SubClass n) {
         System.out.print("class ");
         n.i.accept(this);
         System.out.println(" extends ");
@@ -74,7 +75,7 @@ public class PrettyPrintVisitor implements Visitor {
 
     // Type t;
     // Identifier i;
-    public void visit(VarDecl n) {
+    public void visit(VarDeclaration n) {
         n.t.accept(this);
         System.out.print(" ");
         n.i.accept(this);
@@ -87,7 +88,7 @@ public class PrettyPrintVisitor implements Visitor {
     // VarDeclList vl;
     // StatementList sl;
     // Exp e;
-    public void visit(MethodDecl n) {
+    public void visit(MethodDeclaration n) {
         System.out.print("  public ");
         n.t.accept(this);
         System.out.print(" ");
@@ -274,7 +275,7 @@ public class PrettyPrintVisitor implements Visitor {
     }
 
     // int i;
-    public void visit(IntegerLiteral n) {
+    public void visit(Integer n) {
         System.out.print(n.i);
     }
 

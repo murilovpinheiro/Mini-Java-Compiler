@@ -1,11 +1,13 @@
 package syntaxtree;
+import IRtree.ExpEncode;
+import IRtree.IRVisitor;
 import syntaxtree.visitor.*;
 
 public class While extends Statement {
-    public Exp e;
+    public Expression e;
     public Statement s;
 
-    public While(Exp ae, Statement as) {
+    public While(Expression ae, Statement as) {
         e=ae; s=as;
     }
 
@@ -15,5 +17,9 @@ public class While extends Statement {
 
     public Type accept(TypeVisitor v) {
         return v.visit(this);
+    }
+
+    public ExpEncode accept(IRVisitor irVisitor) {
+        return irVisitor.visit(this);
     }
 }

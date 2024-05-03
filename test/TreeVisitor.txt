@@ -1,6 +1,6 @@
 // The classes are basically the same as the BinaryTree
 // file except the syntaxtree.visitor classes and the accept method
-// in the Tree class
+// in the tree class
 
 class TreeVisitor{
     public static void main(String[] a){
@@ -11,12 +11,12 @@ class TreeVisitor{
 class TV {
 
     public int Start(){
-	Tree root ;
+	tree root ;
 	boolean ntb ;
 	int nti ;
 	MyVisitor v ;
 
-	root = new Tree();
+	root = new tree();
 	ntb = root.Init(16);
 	ntb = root.Print();
 	System.out.println(100000000);
@@ -48,19 +48,19 @@ class TV {
 }
 
 
-class Tree{
-    Tree left ;
-    Tree right;
+class tree{
+    tree left ;
+    tree right;
     int key ;
     boolean has_left ;
     boolean has_right ;
-    Tree my_null ;
+    tree my_null ;
 
 
 
-    //Tree new_node ;
-    //Tree current_node ;
-    //Tree parent_node ;
+    //tree new_node ;
+    //tree current_node ;
+    //tree parent_node ;
 
    // boolean ntb ;
     //boolean cont ;
@@ -79,21 +79,21 @@ class Tree{
 	return true ;
     }
 
-    public boolean SetRight(Tree rn){
+    public boolean SetRight(tree rn){
 	right = rn ;
 	return true ;
     }
 
-    public boolean SetLeft(Tree ln){
+    public boolean SetLeft(tree ln){
 	left = ln ;
 	return true ;
     }
 
-    public Tree GetRight(){
+    public tree GetRight(){
 	return right ;
     }
 
-    public Tree GetLeft(){
+    public tree GetLeft(){
 	return left;
     }
 
@@ -137,13 +137,13 @@ class Tree{
     }
 
     public boolean Insert(int v_key){
-	Tree new_node ;
+	tree new_node ;
 	boolean ntb ;
-	Tree current_node ;
+	tree current_node ;
 	boolean cont ;
 	int key_aux ;
 
-	new_node = new Tree();
+	new_node = new tree();
 	ntb = new_node.Init(v_key) ;
 	current_node = this ;
 	cont = true ;
@@ -172,8 +172,8 @@ class Tree{
     }
 
     public boolean Delete(int v_key){
-	Tree current_node ;
-	Tree parent_node ;
+	tree current_node ;
+	tree parent_node ;
 	boolean cont ;
 	boolean found ;
 	boolean ntb ;
@@ -216,7 +216,7 @@ class Tree{
 	return found ;
     }
 
-    public boolean Remove(Tree p_node, Tree c_node){
+    public boolean Remove(tree p_node, tree c_node){
 	boolean ntb ;
 	int auxkey1 ;
 	int auxkey2 ;
@@ -241,7 +241,7 @@ class Tree{
 	return true ;
     }
 
-    public boolean RemoveRight(Tree p_node, Tree c_node){
+    public boolean RemoveRight(tree p_node, tree c_node){
 	boolean ntb ;
 	while (c_node.GetHas_Right()){
 	    ntb = c_node.SetKey((c_node.GetRight()).GetKey());
@@ -253,7 +253,7 @@ class Tree{
 	return true ;
     }
 
-    public boolean RemoveLeft(Tree p_node, Tree c_node){
+    public boolean RemoveLeft(tree p_node, tree c_node){
 	boolean ntb ;
 	while (c_node.GetHas_Left()){
 	    ntb = c_node.SetKey((c_node.GetLeft()).GetKey());
@@ -267,7 +267,7 @@ class Tree{
 
 
     public int Search(int v_key){
-	Tree current_node ;
+	tree current_node ;
 	int ifound ;
 	boolean cont ;
 	int key_aux ;
@@ -296,14 +296,14 @@ class Tree{
 
     public boolean Print(){
 	boolean ntb ;
-	Tree current_node ;
+	tree current_node ;
 
 	current_node = this ;
 	ntb = this.RecPrint(current_node);
 	return true ;
     }
 
-    public boolean RecPrint(Tree node){
+    public boolean RecPrint(tree node){
 	boolean ntb ;
 
 	if (node.GetHas_Left()){
@@ -329,10 +329,10 @@ class Tree{
 
 
 class syntaxtree.visitor.Visitor {
-    Tree l ;
-    Tree r ;
+    tree l ;
+    tree r ;
 
-    public int visit(Tree n){
+    public int visit(tree n){
 	int nti ;
 
 	if (n.GetHas_Right()){
@@ -353,7 +353,7 @@ class syntaxtree.visitor.Visitor {
 
 class MyVisitor extends syntaxtree.visitor.Visitor {
 
-    public int visit(Tree n){
+    public int visit(tree n){
 	int nti ;
 
 	if (n.GetHas_Right()){

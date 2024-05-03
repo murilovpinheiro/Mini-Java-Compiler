@@ -10,11 +10,11 @@ class BinaryTree{
 class BT {
 
     public int Start(){
-	Tree root ;
+	tree root ;
 	boolean ntb ;
 	int nti ;
 
-	root = new Tree();
+	root = new tree();
 	ntb = root.Init(16);
 	ntb = root.Print();
 	System.out.println(100000000);
@@ -41,13 +41,13 @@ class BT {
 
 }
 
-class Tree{
-    Tree left ;
-    Tree right;
+class tree{
+    tree left ;
+    tree right;
     int key ;
     boolean has_left ;
     boolean has_right ;
-    Tree my_null ;
+    tree my_null ;
 
     // Initialize a node with a key value and no children
     public boolean Init(int v_key){
@@ -58,22 +58,22 @@ class Tree{
     }
 
     // Update the right child with rn
-    public boolean SetRight(Tree rn){
+    public boolean SetRight(tree rn){
 	right = rn ;
 	return true ;
     }
 
     // Update the left child with ln
-    public boolean SetLeft(Tree ln){
+    public boolean SetLeft(tree ln){
 	left = ln ;
 	return true ;
     }
 
-    public Tree GetRight(){
+    public tree GetRight(){
 	return right ;
     }
 
-    public Tree GetLeft(){
+    public tree GetLeft(){
 	return left;
     }
 
@@ -122,13 +122,13 @@ class Tree{
 
     // Insert a new element in the tree
     public boolean Insert(int v_key){
-	Tree new_node ;
+	tree new_node ;
 	boolean ntb ;
 	boolean cont ;
 	int key_aux ;
-	Tree current_node ;
+	tree current_node ;
 
-	new_node = new Tree();
+	new_node = new tree();
 	ntb = new_node.Init(v_key) ;
 	current_node = this ;
 	cont = true ;
@@ -159,8 +159,8 @@ class Tree{
 
     // Delete an element from the tree
     public boolean Delete(int v_key){
-	Tree current_node ;
-	Tree parent_node ;
+	tree current_node ;
+	tree parent_node ;
 	boolean cont ;
 	boolean found ;
 	boolean is_root ;
@@ -206,7 +206,7 @@ class Tree{
 
     // Check if the element to be removed will use the
     // righ or left subtree if one exists
-    public boolean Remove(Tree p_node, Tree c_node){
+    public boolean Remove(tree p_node, tree c_node){
 	boolean ntb ;
 	int auxkey1 ;
 	int auxkey2 ;
@@ -237,7 +237,7 @@ class Tree{
     // Copy the child key to the parent until a leaf is
     // found and remove the leaf. This is done with the
     // right subtree
-    public boolean RemoveRight(Tree p_node, Tree c_node){
+    public boolean RemoveRight(tree p_node, tree c_node){
 	boolean ntb ;
 
 	while (c_node.GetHas_Right()){
@@ -257,7 +257,7 @@ class Tree{
     // Copy the child key to the parent until a leaf is
     // found and remove the leaf. This is done with the
     // left subtree
-    public boolean RemoveLeft(Tree p_node, Tree c_node){
+    public boolean RemoveLeft(tree p_node, tree c_node){
 	boolean ntb ;
 
 	while (c_node.GetHas_Left()){
@@ -277,7 +277,7 @@ class Tree{
     public int Search(int v_key){
 	boolean cont ;
 	int ifound ;
-	Tree current_node;
+	tree current_node;
 	int key_aux ;
 
 	current_node = this ;
@@ -304,7 +304,7 @@ class Tree{
 
     // Invoke the method to really print the tree elements
     public boolean Print(){
-	Tree current_node;
+	tree current_node;
 	boolean ntb ;
 
 	current_node = this ;
@@ -313,7 +313,7 @@ class Tree{
     }
 
     // Print the elements of the tree
-    public boolean RecPrint(Tree node){
+    public boolean RecPrint(tree node){
 	boolean ntb ;
 
 	if (node.GetHas_Left()){

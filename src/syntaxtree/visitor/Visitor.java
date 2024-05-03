@@ -1,12 +1,14 @@
 package syntaxtree.visitor;
 import syntaxtree.*;
+import syntaxtree.Integer;
+
 public interface Visitor {
     public void visit(Program n);
     public void visit(MainClass n);
-    public void visit(ClassDeclSimple n);
-    public void visit(ClassDeclExtends n);
-    public void visit(VarDecl n);
-    public void visit(MethodDecl n);
+    public void visit(NormalClass n);
+    public void visit(SubClass n);
+    public void visit(VarDeclaration n);
+    public void visit(MethodDeclaration n);
     public void visit(Formal n);
     public void visit(IntArrayType n);
     public void visit(BooleanType n);
@@ -26,7 +28,7 @@ public interface Visitor {
     public void visit(ArrayLookup n);
     public void visit(ArrayLength n);
     public void visit(Call n);
-    public void visit(IntegerLiteral n);
+    public void visit(Integer n);
     public void visit(True n);
     public void visit(False n);
     public void visit(IdentifierExp n);

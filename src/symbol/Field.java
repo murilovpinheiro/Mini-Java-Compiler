@@ -1,10 +1,12 @@
 package symbol;
 
+import frame.Access;
 import utils.ErrorMsg;
 import utils.Pair;
 
 public class Field extends Table {
 
+    public Access access;
     private Pair<Symbol, String> formal;
     private String nome;
     private Symbol snome;
@@ -31,5 +33,17 @@ public class Field extends Table {
 
     public String getTipo() {
         return tipo;
+    }
+
+    @Override
+    public String toString() {
+        return "Field{" +
+                "access=" + access +
+                ", formal=" + formal +
+                ", nome='" + nome + '\'' +
+                ", snome=" + snome +
+                ", tipo='" + tipo + '\'' +
+                ", error=" + error +
+                '}';
     }
 }

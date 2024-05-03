@@ -60,6 +60,16 @@ public class MethodTable extends Field {
         return false;
     }
 
+    public Field getInParams(String id) {
+        for (Field obj : getParametros()) {
+            if (obj.getNome().equals(id)) {
+                return obj;
+            }
+        }
+        return null;
+    }
+
+
     public boolean containsInLocals(String id) {
         for (Field obj : getVlocais()) {
             if (obj.getNome().equals(id)) {
@@ -67,5 +77,22 @@ public class MethodTable extends Field {
             }
         }
         return false;
+    }
+
+    public Field getInLocals(String id) {
+        for (Field obj : getVlocais()) {
+            if (obj.getNome().equals(id)) {
+                return obj;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public String toString() {
+        return "MethodTable{" +
+                "parametros=" + parametros +
+                ", vlocais=" + vlocais +
+                '}';
     }
 }

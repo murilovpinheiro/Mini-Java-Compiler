@@ -1,10 +1,12 @@
 package syntaxtree;
+import IRtree.ExpEncode;
+import IRtree.IRVisitor;
 import syntaxtree.visitor.*;
 
-public class Plus extends Exp {
-    public Exp e1,e2;
+public class Plus extends Expression {
+    public Expression e1,e2;
 
-    public Plus(Exp ae1, Exp ae2) {
+    public Plus(Expression ae1, Expression ae2) {
         e1=ae1; e2=ae2;
     }
 
@@ -14,5 +16,9 @@ public class Plus extends Exp {
 
     public Type accept(TypeVisitor v) {
         return v.visit(this);
+    }
+
+    public ExpEncode accept(IRVisitor irVisitor) {
+        return irVisitor.visit(this);
     }
 }

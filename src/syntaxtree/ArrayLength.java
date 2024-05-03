@@ -1,10 +1,12 @@
 package syntaxtree;
+import IRtree.ExpEncode;
+import IRtree.IRVisitor;
 import syntaxtree.visitor.*;
 
-public class ArrayLength extends Exp {
-    public Exp e;
+public class ArrayLength extends Expression {
+    public Expression e;
 
-    public ArrayLength(Exp ae) {
+    public ArrayLength(Expression ae) {
         e=ae;
     }
 
@@ -14,5 +16,9 @@ public class ArrayLength extends Exp {
 
     public Type accept(TypeVisitor v) {
         return v.visit(this);
+    }
+
+    public ExpEncode accept(IRVisitor irVisitor) {
+        return irVisitor.visit(this);
     }
 }

@@ -1,17 +1,9 @@
 
 PARSER_BEGIN(Parser)
-
 import syntaxtree.*;
-import syntaxtree.visitor.*;
-import syntaxtree.*;
-import syntaxtree.visitor.*;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.List;
+import syntaxtree.Integer;import syntaxtree.visitor.*;
+import IRtree.IRVisitor;
+import mips.*;
 
 // Novos métodos de análise do código, análise sintática e léxica
 
@@ -40,84 +32,20 @@ public class Parser {
         try{
             Program prog = parser.Program();
 
-            DepthFirstVisitor table_visitor = new DepthFirstVisitor();
+            SymbolVisitor table_visitor = new SymbolVisitor();
             prog.accept(table_visitor);
 
-            TypeDepthFirstVisitor type_check = new TypeDepthFirstVisitor(table_visitor);
+            TypeDepthVisitor type_check = new TypeDepthVisitor(table_visitor);
             prog.accept(type_check);
+
+            MipsFrame frame = new MipsFrame();
+            IRVisitor visitorInter = new IRVisitor(type_check, frame);
+            prog.accept(visitorInter);
         }
         catch(Exception e){
             System.out.println("Unsuccessful Reading. Showing Error Message:");
             System.out.println(e.getMessage());
         }
-    }
-    private static void fullAnalysis(ArrayList<String> filenames) throws Exception {
-        Parser parser = new Parser(new StringReader(""));
-        for (String nome : filenames) {
-            try {
-                String file = readFile(nome);
-                parser.ReInit(new StringReader(file));
-
-                System.out.println("\nREADING " + nome + "\n");
-
-                List<Token> tokens = LexicalAnalyzer(parser, file);
-                String resultadoAnaliseSintatica = SyntaxAnalyzer(parser, file);
-                if (resultadoAnaliseSintatica.equals("")) {
-                    System.out.println("\n SYNTAX OK \n");
-                } else {
-                    System.out.println("\nSYNTAX ERROR: " + resultadoAnaliseSintatica + "\n");
-                }
-                parser.ReInit(new StringReader(file));
-            } catch (Exception e) {
-                System.out.println("ERROR: " + e.getCause());
-            }
-        }
-    }
-
-    private static ArrayList<Token> LexicalAnalyzer(Parser parser, String input) throws TokenMgrError {
-        parser.ReInit(new StringReader(input));
-        ArrayList<Token> tokens = new ArrayList<Token>();
-        try {
-            while (true) {
-                Token token = parser.getNextToken();
-                if (token.kind == 0) {
-                    break;
-                }
-                tokens.add(token);
-                //System.out.println("TOKEN: " + token.image);
-            }
-        } catch (TokenMgrError e) {
-            System.out.println("LEXICAL ERROR: " + e.getMessage());
-           for (Token token : tokens) {
-                System.out.println("ROW " + token.beginLine + ", COLUMN " + token.beginColumn +
-                        ": IMAGE: \"" + token.image + "\", KIND: " + token.kind);
-            }
-        }
-
-        return tokens;
-    }
-
-    private static String SyntaxAnalyzer(Parser parser, String input) {
-        String res = "";
-        try {
-            parser.ReInit(new StringReader(input));
-            parser.Program();
-            return res;
-        } catch (Throwable e) {
-            return e.getMessage();
-        }
-    }
-    private static String readFile(String filePath) throws Exception {
-        File file = new File(filePath);
-        BufferedReader reader = new BufferedReader(new FileReader(file));
-        String line;
-        StringBuilder stringBuilder = new StringBuilder();
-        while ((line = reader.readLine()) != null) {
-            stringBuilder.append(line);
-            stringBuilder.append(System.lineSeparator());
-        }
-        reader.close();
-        return stringBuilder.toString();
     }
 }
 PARSER_END(Parser)
@@ -207,12 +135,12 @@ SKIP :
 Program Program() :
 {
     MainClass main;
-    ClassDecl decl;
-    ClassDeclList classlist = new ClassDeclList();
+    ClassDeclaration decl;
+    ClassList classlist = new ClassList();
 }
 {
     main = MainClass()
-    (decl = ClassDeclaration() {classlist.addElement(decl);})*
+    (decl = ClassDefinition() {classlist.addElement(decl);})*
     <EOF>
 
     {return new Program(main, classlist);}
@@ -248,20 +176,20 @@ MainClass MainClass() :
     // }
 
 // REFATORADO, extends mudado para ficar menos código
-ClassDecl ClassDeclaration() :
+ClassDeclaration ClassDefinition() :
 {
     Identifier classname, superclass = null;
-    VarDecl vd; VarDeclList varlist = new VarDeclList();
-    MethodDecl md; MethodDeclList methodlist = new MethodDeclList();
+    VarDeclaration vd; VarList varlist = new VarList();
+    MethodDeclaration md; MethodList methodlist = new MethodList();
 }
 {
     <CLASS> classname = ID()
     (<EXTENDS> superclass = ID())? "{"
-        (vd = VarDeclaration() {varlist.addElement(vd);})* (md = MethodDeclaration() {methodlist.addElement(md);})*
+        (vd = VarDefinition() {varlist.addElement(vd);})* (md = MethodDefinition() {methodlist.addElement(md);})*
     "}"
 
-    {if (superclass == null) return new ClassDeclSimple(classname, varlist, methodlist);
-    else return new ClassDeclExtends(classname, superclass, varlist, methodlist);}
+    {if (superclass == null) return new NormalClass(classname, varlist, methodlist);
+else return new SubClass(classname, superclass, varlist, methodlist);}
 }
 
 // Attribute Definition, denoted by the format:
@@ -269,14 +197,14 @@ ClassDecl ClassDeclaration() :
 
 // FEITO, nenhuma mudança
 
-VarDecl VarDeclaration() :
+VarDeclaration VarDefinition() :
 {
     Type t; Identifier i;
 }
 {
     t = Type() i = ID() <SCOLON>
 
-    {return new VarDecl(t, i);}
+    {return new VarDeclaration(t, i);}
 }
 
 //Method Definition, in format:
@@ -287,24 +215,24 @@ VarDecl VarDeclaration() :
 //  }
 
 // FEITO, mudei só o nome de algumas variáveis e reescrevi, mas no geral parece o mesmo
-MethodDecl MethodDeclaration() :
+MethodDeclaration MethodDefinition() :
 {
     Type t, others_t;
     Identifier method_name, params_name;
-    Exp e;
-    MethodDecl md; VarDecl vd; Statement st;
+    Expression e;
+    MethodDeclaration md; VarDeclaration vd; Statement st;
 
-    FormalList formalist = new FormalList(); VarDeclList varlist = new VarDeclList(); StatementList statelist = new StatementList();
+    FormalList formalist = new FormalList(); VarList varlist = new VarList(); StatementList statelist = new StatementList();
 }
 {
     <PUBLIC> t = Type() method_name = ID() "("
         (others_t = Type() params_name = ID() {formalist.addElement(new Formal(others_t, params_name));} ( "," others_t = Type() params_name = ID() {formalist.addElement(new Formal(others_t, params_name));})* )?
     ")" "{"
-        (LOOKAHEAD(2) vd = VarDeclaration() {varlist.addElement(vd);})*
+        (LOOKAHEAD(2) vd = VarDefinition() {varlist.addElement(vd);})*
         (st = Statement() {statelist.addElement(st);})*
-        "return" e = Expression() <SCOLON>
+        "return" e = Expression_() <SCOLON>
     "}"
-    {return new MethodDecl(t, method_name, formalist, varlist, statelist, e);}
+    {return new MethodDeclaration(t, method_name, formalist, varlist, statelist, e);}
 }
 
 // Function to check type tokens, classified in 4 possibilities:
@@ -323,72 +251,71 @@ Type Type() :
     | id = ID() {return new IdentifierType(id.toString());}
 }
 
-
-
 Statement Statement() :
 {
    Statement s, s2;
-   Exp e, e2; Identifier id;
+   Expression e, e2; Identifier id;
    StatementList sl = new StatementList();
 }
 {
     "{" (s = Statement() {sl.addElement(s);})* "}" { return new Block(sl); }
-    | <IF> "(" e = Expression() ")" s = Statement() <ELSE> s2 = Statement() { return new If(e, s, s2); }
-    | <WHILE> "(" e = Expression() ")" s = Statement() { return new While(e, s); }
-    | <PRINT> "(" e = Expression() ")" <SCOLON> { return new Print(e); }
+    | <IF> "(" e = Expression_() ")" s = Statement() <ELSE> s2 = Statement() { return new If(e, s, s2); }
+    | <WHILE> "(" e = Expression_() ")" s = Statement() { return new While(e, s); }
+    | <PRINT> "(" e = Expression_() ")" <SCOLON> { return new Print(e); }
     | LOOKAHEAD(2) // coloquei de 6 para 2
-      id = ID() "=" e = Expression() <SCOLON> { return new Assign(id, e); }
-    | id = ID() "[" e = Expression() "]" "=" e2 = Expression() <SCOLON> { return new ArrayAssign(id, e, e2); }
+      id = ID() "=" e = Expression_() <SCOLON> { return new Assign(id, e); }
+    | id = ID() "[" e = Expression_() "]" "=" e2 = Expression_() <SCOLON> { return new ArrayAssign(id, e, e2); }
 }
 
 // TODA A PARTE DE EXPRESSÕES E DE REMOÇÃO DE LEFT-RECURSION FOI REFEITA DO 0
 // FIZEMOS MENOS MÉTODOS, MENOS CÓDIGO, O ANTIGO TAMBÉM ESTAVA INCOMPLETO E PARECIA NÃO FUNCIONAR EM ALGUNS CASOS.
 
-Exp Expression() :
+Expression Expression_() :
 {
-    Exp e1;
+    Expression e1;
 }
 {
     e1 = Expression_value() (LOOKAHEAD(2) e1 = Expression_final(e1))*
     { return e1; }
 }
 
-Exp Expression_value() :
+Expression Expression_value() :
 {
-    Exp e, e2;
+    Expression e, e2;
     Token t;
     Identifier id;
 }
 {
     <THIS> { e = new This(); return e; }
-    | <LNOT> e2 = Expression() { e = new Not(e2); return e; }
+    | <LNOT> e2 = Expression_() { e = new Not(e2); return e; }
     | <TRUE> { e = new True(); return e; }
     | <FALSE> { e = new False(); return e; }
-    | t = <NUM> { e = new IntegerLiteral(Integer.parseInt(t.image)); return e; }
+    | t = <NUM> { e = new Integer(java.lang.Integer.parseInt(t.image)); return e; }
     | id = ID() { e = new IdentifierExp(id.toString()); return e; }
-    | "(" e2 = Expression() ")" { e = e2; return e; }
-    | <NEW> id = ID() "(" ")" { e = new NewObject(id); return e; }
+    | "(" e2 = Expression_() ")" { e = e2; return e; }
     | LOOKAHEAD(2)
-          <NEW> <INT> "[" e2 = Expression() "]" { e = new NewArray(e2); return e; }
+      <NEW> <INT> "[" e2 = Expression_() "]" { e = new NewArray(e2); return e; }
+    | <NEW> id = ID() "(" ")" { e = new NewObject(id); return e; }
 }
 
-Exp Expression_final(Exp left_exp) :
+Expression Expression_final(Expression left_expression) :
 {
-    Exp right_exp; Exp final_exp;
+    Expression right_expression; Expression final_expression;
     Identifier id;
-    ExpList el = new ExpList();
+    ExpressionList el = new ExpressionList();
 }
 {
-    <LAND> right_exp = Expression() { return new And(left_exp, right_exp); }
-    | <PLUS> right_exp = Expression() { return new Plus(left_exp, right_exp); }
-    | <SMALLER> right_exp = Expression() { return new LessThan(left_exp, right_exp); }
-    | <MINUS> right_exp = Expression() { return new Minus(left_exp, right_exp); }
-    | <MULT> right_exp = Expression() { return new Times(left_exp, right_exp); }
-    | "[" right_exp = Expression() "]" { return new ArrayLookup(left_exp, right_exp); }
-    | "." id = ID() "(" ( right_exp = Expression() { el.addElement(right_exp);}
-        ( "," right_exp = Expression() { el.addElement(right_exp);} )* )? ")" { return new Call(left_exp, id, el); }
+    <LAND> right_expression = Expression_() { return new And(left_expression, right_expression); }
+    | <PLUS> right_expression = Expression_() { return new Plus(left_expression, right_expression); }
+    | <SMALLER> right_expression = Expression_() { return new LessThan(left_expression, right_expression); }
+    | <MINUS> right_expression = Expression_() { return new Minus(left_expression, right_expression); }
+    | <MULT> right_expression = Expression_() { return new Times(left_expression, right_expression); }
+    | "[" right_expression = Expression_() "]" { return new  ArrayLookup(left_expression, right_expression);}
     | LOOKAHEAD(2)
-          "." <LENGTH> { return new ArrayLength(left_exp); }
+              "." <LENGTH> { return new ArrayLength(left_expression); }
+    | "." id = ID() "(" ( right_expression = Expression_() { el.addElement(right_expression);}
+        ( "," right_expression = Expression_() { el.addElement(right_expression);} )* )? ")" { return new Call(left_expression, id, el); }
+
 }
 
 // FEITO, nenhuma mudança
