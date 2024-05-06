@@ -16,30 +16,19 @@ import utils.Conversor;
 //Intermediate Visitor Class
 public class IRVisitor implements IRtree.Visitor {
 
-    Stack<Frame> frames;
-    Frame currentFrame;
     public ClassTable mainClass;
     public Hashtable<Symbol, ClassTable> classList;
+    public ArrayList <Frag> fragments;
+    Stack<Frame> frames;
+    Frame currentFrame;
     MethodTable currentMethod;
     ClassTable currentClass;
-    public ArrayList <Frag> fragments;
     ClassTable callStackClass;
     MethodTable callStackMethod;
 
-
-    public IRVisitor(TypeDepthVisitor v, Frame currentFrame) {
-        mainClass = v.mainClass;
-        classList = v.classList;
-
-        this.currentFrame = currentFrame;
-        frames = new Stack<Frame>();
-        frames.push(currentFrame);
-        fragments = new ArrayList<Frag>();
-    }
-
-    public IRVisitor(SymbolVisitor v, Frame currentFrame) {
-        mainClass = v.mainClass;
-        classList = v.classList;
+    public IRVisitor(TypeDepthVisitor visitor, Frame currentFrame) {
+        mainClass = visitor.mainClass;
+        classList = visitor.classList;
 
         this.currentFrame = currentFrame;
         frames = new Stack<Frame>();
@@ -47,25 +36,35 @@ public class IRVisitor implements IRtree.Visitor {
         fragments = new ArrayList<Frag>();
     }
 
-    public ExpEncode getAddress(Symbol var) {
+    public IRVisitor(SymbolVisitor visitor, Frame currentFrame) {
+        mainClass = visitor.mainClass;
+        classList = visitor.classList;
 
-        Field varEnd;
-        if((varEnd = currentMethod.getInParams(var.toString())) != null);
-        else if((varEnd = currentMethod.getInLocals(var.toString()))!= null);
-        else if ((varEnd = mainClass.getInAtb(var.toString())) != null);
-        else varEnd= currentClass.getInAtb(var.toString());
+        this.currentFrame = currentFrame;
+        frames = new Stack<Frame>();
+        frames.push(currentFrame);
+        fragments = new ArrayList<Frag>();
+    }
 
-        return new ExpEncode(varEnd.access.exp(new TEMP(currentFrame.FP())));
+    public ExpEncode getAddress(Symbol variable) {
+
+        Field variableEnd;
+        if((variableEnd = currentMethod.getInParams(variable.toString())) != null);
+        else if((variableEnd = currentMethod.getInLocals(variable.toString()))!= null);
+        else if ((variableEnd = mainClass.getInAtb(variable.toString())) != null);
+        else variableEnd= currentClass.getInAtb(variable.toString());
+
+        return new ExpEncode(variableEnd.access.exp(new TEMP(currentFrame.FP())));
     }
 
     @Override
-    public ExpEncode visit(Program n) {
+    public ExpEncode visit(Program prog) {
 
-        n.m.accept(this);
+        prog.m.accept(this);
 
-        for (int i = 0; i < n.cl.size(); i++) {
-            this.currentClass = this.classList.get(Symbol.symbol(n.cl.elementAt(i).toString()));
-            n.cl.elementAt(i).accept(this);
+        for (int i = 0; i < prog.cl.size(); i++) {
+            this.currentClass = this.classList.get(Symbol.symbol(prog.cl.elementAt(i).toString()));
+            prog.cl.elementAt(i).accept(this);
         }
 
         tree.Print h = new tree.Print(System.out);
@@ -81,7 +80,7 @@ public class IRVisitor implements IRtree.Visitor {
     }
 
     @Override
-    public ExpEncode visit(MainClass n) {
+    public ExpEncode visit(MainClass main) {
 
         this.currentClass = mainClass;
 
@@ -91,7 +90,7 @@ public class IRVisitor implements IRtree.Visitor {
         currentFrame = currentFrame.newFrame(Symbol.symbol("main"),j);
         frames.push(currentFrame);
 
-        Stm body = new EXPR(n.s.accept(this).getExp());
+        Stm body = new EXPR(main.s.accept(this).getExp());
         ArrayList<Stm> lista = new ArrayList<Stm>();
         lista.add(body);
 
@@ -103,89 +102,62 @@ public class IRVisitor implements IRtree.Visitor {
     }
 
     @Override
-    public ExpEncode visit(NormalClass n) {
+    public ExpEncode visit(NormalClass normal) {
 
-        this.currentClass = classList.get(Symbol.symbol(n.i.toString()));
-        for (int i = 0; i < n.vl.size(); i++) {
-            n.vl.elementAt(i).accept(this);
+        this.currentClass = classList.get(Symbol.symbol(normal.i.toString()));
+        for (int i = 0; i < normal.vl.size(); i++) {
+            normal.vl.elementAt(i).accept(this);
         }
 
-        for (int i = 0; i < n.ml.size(); i++) {
-            n.ml.elementAt(i).accept(this);
-        }
-
-        return null;
-    }
-
-    @Override
-    public ExpEncode visit(SubClass n) {
-
-        this.currentClass = classList.get(Symbol.symbol(n.i.toString()));
-        for (int i = 0; i < n.vl.size(); i++) {
-            n.vl.elementAt(i).accept(this);
-        }
-
-        for (int i = 0; i < n.ml.size(); i++) {
-            n.ml.elementAt(i).accept(this);
+        for (int i = 0; i < normal.ml.size(); i++) {
+            normal.ml.elementAt(i).accept(this);
         }
 
         return null;
     }
 
     @Override
-    public ExpEncode visit(VarDeclaration n) {
+    public ExpEncode visit(SubClass sub) {
 
-        Field varEnd;
-
-        if(currentMethod != null) {
-            varEnd= currentMethod.getInParams(n.i.toString());
-
-            if(varEnd != null) {
-                varEnd.access = currentFrame.allocLocal(false);
-                return null;
-            }
-
-            varEnd = currentMethod.getInLocals(n.i.toString());
-
-            if(varEnd!= null) {
-                varEnd.access = currentFrame.allocLocal(false);
-                return null;
-            }
+        this.currentClass = classList.get(Symbol.symbol(sub.i.toString()));
+        for (int i = 0; i < sub.vl.size(); i++) {
+            sub.vl.elementAt(i).accept(this);
         }
 
-        varEnd = currentClass.getInAtb(n.i.toString());
+        for (int i = 0; i < sub.ml.size(); i++) {
+            sub.ml.elementAt(i).accept(this);
+        }
 
-        if(varEnd!= null) varEnd.access = currentFrame.allocLocal(false);
-
-        return new ExpEncode(varEnd.access.exp((new TEMP(currentFrame.FP()))));
+        return null;
     }
 
+
     @Override
-    public ExpEncode visit(MethodDeclaration n) {
+    public ExpEncode visit(MethodDeclaration method) {
 
         Stm body = new EXPR(new CONST(0));
 
         ArrayList<Boolean> j = new ArrayList<Boolean>();
 
-        currentMethod = currentClass.getInMethods(n.i.toString());
+        currentMethod = currentClass.getInMethods(method.i.toString());
 
-        for (int i = 0; i <= n.fl.size(); i++) {
+        for (int i = 0; i <= method.fl.size(); i++) {
             j.add(false);
         }
 
         currentFrame = currentFrame.newFrame(Symbol.symbol(currentClass.toString()+"$"+ currentMethod.toString()), (java.util.List<Boolean>)j);
         frames.push(currentFrame);
 
-        for (int i = 0; i < n.fl.size(); i++) {
-            n.fl.elementAt(i).accept(this);
+        for (int i = 0; i < method.fl.size(); i++) {
+            method.fl.elementAt(i).accept(this);
         }
 
-        for (int i = 0; i < n.vl.size(); i++) {
-            n.vl.elementAt(i).accept(this);
+        for (int i = 0; i < method.vl.size(); i++) {
+            method.vl.elementAt(i).accept(this);
         }
 
-        for (int i = 0; i < n.sl.size(); i++) {
-            body = new SEQ(body,new EXPR(n.sl.elementAt(i).accept(this).getExp()));
+        for (int i = 0; i < method.sl.size(); i++) {
+            body = new SEQ(body,new EXPR(method.sl.elementAt(i).accept(this).getExp()));
         }
 
         ArrayList<Stm> l = new ArrayList<Stm>();
@@ -199,55 +171,99 @@ public class IRVisitor implements IRtree.Visitor {
     }
 
     @Override
-    public ExpEncode visit(Formal n) {
+    public ExpEncode visit(VarDeclaration var) {
 
-        Field varEnd = currentMethod.getInParams(n.i.toString());
+        Field varEnd;
+
+        if(currentMethod != null) {
+            varEnd= currentMethod.getInParams(var.i.toString());
+
+            if(varEnd != null) {
+                varEnd.access = currentFrame.allocLocal(false);
+                return null;
+            }
+
+            varEnd = currentMethod.getInLocals(var.i.toString());
+
+            if(varEnd!= null) {
+                varEnd.access = currentFrame.allocLocal(false);
+                return null;
+            }
+        }
+
+        varEnd = currentClass.getInAtb(var.i.toString());
+
+        if(varEnd!= null) varEnd.access = currentFrame.allocLocal(false);
+
+        return new ExpEncode(varEnd.access.exp((new TEMP(currentFrame.FP()))));
+    }
+
+    @Override
+    public ExpEncode visit(Formal formal) {
+
+        Field varEnd = currentMethod.getInParams(formal.i.toString());
         varEnd.access = currentFrame.allocLocal(false);
 
         return null;
     }
 
     @Override
-    public ExpEncode visit(IntArrayType n) {
+    public ExpEncode visit(IntArrayType iat) {
         return null;
     }
 
     @Override
-    public ExpEncode visit(BooleanType n) {
+    public ExpEncode visit(BooleanType bt) {
         return null;
     }
 
     @Override
-    public ExpEncode visit(IntegerType n) {
+    public ExpEncode visit(IntegerType it) {
         return null;
     }
 
     @Override
-    public ExpEncode visit(IdentifierType n) {
+    public ExpEncode visit(IdentifierType idt) {
         return null;
     }
 
     @Override
-    public ExpEncode visit(Block n) {
+    public ExpEncode visit(Block block) {
         tree.Exp stm = new CONST(0);
-        for (int i = 0; i < n.sl.size(); i++) {
-            stm = new ESEQ(new SEQ(new EXPR(stm),new EXPR(n.sl.elementAt(i).accept(this).getExp())),new CONST(0));
+        for (int i = 0; i < block.sl.size(); i++) {
+            stm = new ESEQ(new SEQ(new EXPR(stm),new EXPR(block.sl.elementAt(i).accept(this).getExp())),new CONST(0));
         }
 
         return new ExpEncode(stm);
     }
 
     @Override
-    public ExpEncode visit(If n) {
+    public ExpEncode visit(While w) {
+
+        Label test = new Label();
+        Label body = new Label();
+        Label end = new Label();
+
+        ExpEncode cond = w.e.accept(this);
+        ExpEncode stm = w.s.accept(this);
+
+        return new ExpEncode(new ESEQ(new SEQ(new SEQ(new LABEL(test),
+                new SEQ(new CJUMP(CJUMP.GT,cond.getExp(),new CONST(0), body, end),
+                        new SEQ(new LABEL(body), new SEQ(new EXPR(stm.getExp()),new JUMP(test))))),
+                new LABEL(end)), new CONST(0)));
+    }
+
+    @Override
+    public ExpEncode visit(If i) {
 
         Label ifF = new Label();
         Label elseE = new Label();
         Label end = new Label();
 
-        tree.Exp cond = n.e.accept(this).getExp();
+        tree.Exp cond = i.e.accept(this).getExp();
 
-        ExpEncode label1 = n.s1.accept(this);
-        ExpEncode label2 = n.s2.accept(this);
+        ExpEncode label1 = i.s1.accept(this);
+        ExpEncode label2 = i.s2.accept(this);
 
         tree.Exp Cx = new ESEQ(new SEQ(new CJUMP(CJUMP.GT,cond,new CONST(0),ifF,elseE),
                 new SEQ(new SEQ(new LABEL(ifF),new SEQ(new EXPR(label1.getExp()), new JUMP(end))),
@@ -258,124 +274,109 @@ public class IRVisitor implements IRtree.Visitor {
     }
 
     @Override
-    public ExpEncode visit(While n) {
-
-        Label test = new Label();
-        Label body = new Label();
-        Label end = new Label();
-
-        ExpEncode cond = n.e.accept(this);
-        ExpEncode stm = n.s.accept(this);
-
-        return new ExpEncode(new ESEQ(new SEQ(new SEQ(new LABEL(test),
-                new SEQ(new CJUMP(CJUMP.GT,cond.getExp(),new CONST(0), body, end),
-                        new SEQ(new LABEL(body), new SEQ(new EXPR(stm.getExp()),new JUMP(test))))),
-                new LABEL(end)), new CONST(0)));
-    }
-
-    @Override
-    public ExpEncode visit(syntaxtree.Print n) {
-        ExpEncode exp = n.e.accept(this);
+    public ExpEncode visit(syntaxtree.Print sP) {
+        ExpEncode exp = sP.e.accept(this);
         tree.ExpList parameters= new tree.ExpList(exp.getExp(),null);
 
         return new ExpEncode( currentFrame.externalCall("print", Conversor.ExpListToList(parameters)));
     }
 
     @Override
-    public ExpEncode visit(Assign n) {
-        ExpEncode i = n.i.accept(this);
-        ExpEncode e = n.e.accept(this);
+    public ExpEncode visit(Assign a) {
+        ExpEncode i = a.i.accept(this);
+        ExpEncode e = a.e.accept(this);
 
         return new ExpEncode(new ESEQ(new MOVE( i.getExp(), e.getExp() ), new CONST(0)));
     }
 
     @Override
-    public ExpEncode visit(ArrayAssign n) {
-        ExpEncode i = n.i.accept(this);
-        ExpEncode e1 = n.e1.accept(this);
-        ExpEncode e2 = n.e2.accept(this);
+    public ExpEncode visit(ArrayAssign aa) {
+        ExpEncode i = aa.i.accept(this);
+        ExpEncode e1 = aa.e1.accept(this);
+        ExpEncode e2 = aa.e2.accept(this);
 
         return new ExpEncode( new ESEQ(new MOVE(new MEM(new BINOP(BINOP.PLUS, i.getExp(), new BINOP(BINOP.MUL, e1.getExp(), new CONST(currentFrame.wordSize())))), e2.getExp()), new CONST(0)) );
     }
 
     @Override
-    public ExpEncode visit(And n) {
-        ExpEncode e1 = n.e1.accept(this);
-        ExpEncode e2 = n.e2.accept(this);
-
-        return new ExpEncode(new BINOP(BINOP.AND, e1.getExp(), e2.getExp()));
-    }
-
-    @Override
-    public ExpEncode visit(LessThan n) {
-        ExpEncode e1 = n.e1.accept(this);
-        ExpEncode e2 = n.e2.accept(this);
+    public ExpEncode visit(LessThan lt) {
+        ExpEncode e1 = lt.e1.accept(this);
+        ExpEncode e2 = lt.e2.accept(this);
 
         return new ExpEncode(new BINOP(BINOP.MINUS, e2.getExp(), e1.getExp()));
     }
 
     @Override
-    public ExpEncode visit(Plus n) {
-        ExpEncode e1 = n.e1.accept(this);
-        ExpEncode e2 = n.e2.accept(this);
+    public ExpEncode visit(And a) {
+        ExpEncode e1 = a.e1.accept(this);
+        ExpEncode e2 = a.e2.accept(this);
 
-        return new ExpEncode(new BINOP(BINOP.PLUS, e1.getExp(), e2.getExp()));
+        return new ExpEncode(new BINOP(BINOP.AND, e1.getExp(), e2.getExp()));
     }
 
     @Override
-    public ExpEncode visit(Minus n) {
-        ExpEncode e1 = n.e1.accept(this);
-        ExpEncode e2 = n.e2.accept(this);
-
-        return new ExpEncode(new BINOP(BINOP.MINUS, e1.getExp(), e2.getExp()));
-    }
-
-    @Override
-    public ExpEncode visit(Times n) {
-        ExpEncode e1 = n.e1.accept(this);
-        ExpEncode e2 = n.e2.accept(this);
+    public ExpEncode visit(Times t) {
+        ExpEncode e1 = t.e1.accept(this);
+        ExpEncode e2 = t.e2.accept(this);
 
         return new ExpEncode(new BINOP(BINOP.MUL, e1.getExp(), e2.getExp()));
     }
 
     @Override
-    public ExpEncode visit(ArrayLookup n) {
-        ExpEncode e1 = n.e1.accept(this);
-        ExpEncode e2 = n.e2.accept(this);
+    public ExpEncode visit(ArrayLookup al) {
+        ExpEncode e1 = al.e1.accept(this);
+        ExpEncode e2 = al.e2.accept(this);
 
         return new ExpEncode(new MEM(new BINOP(BINOP.PLUS, e1.getExp(), new BINOP(BINOP.MUL, new BINOP(BINOP.PLUS, new CONST(1), e2.getExp()), new CONST(currentFrame.wordSize())))));
 
     }
 
     @Override
-    public ExpEncode visit(ArrayLength n) {
-        return new ExpEncode(new MEM(getAddress(Symbol.symbol(( (IdentifierExp) n.e).s)).getExp()));
+    public ExpEncode visit(Plus p) {
+        ExpEncode e1 = p.e1.accept(this);
+        ExpEncode e2 = p.e2.accept(this);
+
+        return new ExpEncode(new BINOP(BINOP.PLUS, e1.getExp(), e2.getExp()));
     }
 
     @Override
-    public ExpEncode visit(Call n) {
+    public ExpEncode visit(Minus m) {
+        ExpEncode e1 = m.e1.accept(this);
+        ExpEncode e2 = m.e2.accept(this);
+
+        return new ExpEncode(new BINOP(BINOP.MINUS, e1.getExp(), e2.getExp()));
+    }
+
+
+    @Override
+    public ExpEncode visit(ArrayLength al) {
+        return new ExpEncode(new MEM(getAddress(Symbol.symbol(( (IdentifierExp) al.e).s)).getExp()));
+    }
+
+    @Override
+    public ExpEncode visit(Call c) {
         ClassTable j = null;
 
         tree.ExpList list = null;
-        for (int i = n.el.size()-1; i >= 0 ; i--) {
-            list = new tree.ExpList(n.el.elementAt(i).accept(this).getExp(), list);
+        for (int i = c.el.size()-1; i >= 0 ; i--) {
+            list = new tree.ExpList(c.el.elementAt(i).accept(this).getExp(), list);
         }
 
-        list = new tree.ExpList(n.e.accept(this).getExp(),list);
+        list = new tree.ExpList(c.e.accept(this).getExp(),list);
 
-        if (n.e instanceof This) {
+        if (c.e instanceof This) {
             j = currentClass;
         }
 
-        if (n.e instanceof NewObject) {
-            j = classList.get(Symbol.symbol(n.e.toString()));
+        if (c.e instanceof NewObject) {
+            j = classList.get(Symbol.symbol(c.e.toString()));
         }
 
-        if (n.e instanceof IdentifierExp) {
+        if (c.e instanceof IdentifierExp) {
             Field var;
 
-            var = currentMethod.getInParams(n.e.toString());
-            if (var == null) var = currentMethod.getInLocals(n.e.toString());
+            var = currentMethod.getInParams(c.e.toString());
+            if (var == null) var = currentMethod.getInLocals(c.e.toString());
 
             if (var == null) {
                 j = currentClass;
@@ -386,7 +387,7 @@ public class IRVisitor implements IRtree.Visitor {
 
         }
 
-        if(n.e instanceof Call) {
+        if(c.e instanceof Call) {
             var returnType = callStackMethod.getTipo();
 
             Iterator<Symbol> iterator = classList.keySet().iterator();
@@ -405,45 +406,45 @@ public class IRVisitor implements IRtree.Visitor {
                 System.out.println(currentClass.getNome());
             if(currentMethod != null)
                 System.out.println(currentMethod.getNome());
-            System.out.println(n.e);
-            System.out.println(n.i);
-            System.out.println(n.e.getClass());
+            System.out.println(c.e);
+            System.out.println(c.i);
+            System.out.println(c.e.getClass());
         }
 
         callStackClass = j;
-        callStackMethod = j.getInMethods(n.i.toString());
-        return new ExpEncode(new CALL(new NAME(new Label(j.getNome()+"$"+n.i.toString())),list));
+        callStackMethod = j.getInMethods(c.i.toString());
+        return new ExpEncode(new CALL(new NAME(new Label(j.getNome()+"$"+c.i.toString())),list));
     }
 
     @Override
-    public ExpEncode visit(Integer n) {
-        return new ExpEncode(new CONST(n.i));
+    public ExpEncode visit(Integer i) {
+        return new ExpEncode(new CONST(i.i));
     }
 
     @Override
-    public ExpEncode visit(True n) {
+    public ExpEncode visit(True t) {
         return new ExpEncode(new CONST(1));
     }
 
     @Override
-    public ExpEncode visit(False n) {
+    public ExpEncode visit(False f) {
         return new ExpEncode(new CONST(0));
     }
 
     @Override
-    public ExpEncode visit(IdentifierExp n) {
-        return getAddress(Symbol.symbol(n.s));
+    public ExpEncode visit(IdentifierExp ie) {
+        return getAddress(Symbol.symbol(ie.s));
     }
 
     @Override
-    public ExpEncode visit(This n) {
+    public ExpEncode visit(This t) {
         return new ExpEncode(new MEM(new TEMP(currentFrame.FP())));
     }
 
     @Override
-    public ExpEncode visit(NewArray n) {
+    public ExpEncode visit(NewArray na) {
 
-        ExpEncode size = n.e.accept(this);
+        ExpEncode size = na.e.accept(this);
 
         tree.Exp allocation = new BINOP(BINOP.MUL, new BINOP(BINOP.PLUS, size.getExp(), new CONST(1)) ,new CONST(currentFrame.wordSize()));
 
@@ -457,8 +458,8 @@ public class IRVisitor implements IRtree.Visitor {
     }
 
     @Override
-    public ExpEncode visit(NewObject n) {
-        ClassTable j = classList.get(Symbol.symbol(n.i.toString()));
+    public ExpEncode visit(NewObject no) {
+        ClassTable j = classList.get(Symbol.symbol(no.i.toString()));
         int size = j.getAtributos().size();
 
         tree.ExpList parameters = new tree.ExpList(new BINOP(BINOP.MUL,new CONST(1+size) , new CONST(currentFrame.wordSize())), null);
@@ -474,7 +475,7 @@ public class IRVisitor implements IRtree.Visitor {
     }
 
     @Override
-    public ExpEncode visit(Identifier n) {
-        return getAddress(Symbol.symbol(n.s));
+    public ExpEncode visit(Identifier i) {
+        return getAddress(Symbol.symbol(i.s));
     }
 }
