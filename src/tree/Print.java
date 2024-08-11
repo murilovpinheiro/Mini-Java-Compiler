@@ -3,7 +3,7 @@ package tree;
 public class Print {
 
   java.io.PrintStream out;
-  temp.TempMap tmap;
+  public temp.TempMap tmap;
 
   public Print(java.io.PrintStream o, temp.TempMap t) {out=o; tmap=t;}
 

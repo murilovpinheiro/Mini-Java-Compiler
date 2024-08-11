@@ -1,9 +1,20 @@
 
 PARSER_BEGIN(Parser)
 import syntaxtree.*;
-import syntaxtree.Integer;import syntaxtree.visitor.*;
-import IRtree.IRVisitor;
+import syntaxtree.Integer;
+import syntaxtree.visitor.*;
+import IRtree.*;
 import mips.*;
+import utils.*;
+import temp.*;
+import canon.*;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
 
 // Novos métodos de análise do código, análise sintática e léxica
 
@@ -41,6 +52,38 @@ public class Parser {
             MipsFrame frame = new MipsFrame();
             IRVisitor visitorInter = new IRVisitor(type_check, frame);
             prog.accept(visitorInter);
+
+            ArrayList<Frag> frags = visitorInter.fragments;
+                        for (int i = 0; i < frags.size(); ++i) {
+                            Frag atual = frags.get(i);
+
+                            tree.Print h = new tree.Print(System.out, new CombineMap(atual.frame, new DefaultMap()));
+
+                            System.out.println("\n\nFUNCAO: " + atual.nome);
+
+                            System.out.println("\nSem canonizar:\n");
+                            h.prStm(atual.body);
+
+                            System.out.println("\nCanonizado:\n");
+                            tree.StmList statements = Canon.linearize(atual.body);
+                            for (tree.StmList c = statements; c != null; c = c.tail) {
+                                h.prStm(c.head);
+                            }
+
+                            // TODO: printar os dois abaixo
+                            BasicBlocks b = new BasicBlocks(statements);
+                            tree.StmList t = (new TraceSchedule(b)).stms;
+
+                            List<assem.Instr> instrucoes = ((mips.MipsFrame) atual.frame).codegen(Conversor.StmListToArray(t));
+
+                            System.out.println("\nInstrucoes:\n");
+                            for (int j = 0; j < instrucoes.size(); ++j) {
+                                System.out.println(instrucoes.get(j).format(h.tmap));
+                            }
+                            System.out.println("\nFLUXO:\n");
+                            graph.AssemFlowGraph fluxo = new graph.AssemFlowGraph(Conversor.ArrayToInstrList(instrucoes));
+                            fluxo.show(System.out);
+                        }
         }
         catch(Exception e){
             System.out.println("Unsuccessful Reading. Showing Error Message:");

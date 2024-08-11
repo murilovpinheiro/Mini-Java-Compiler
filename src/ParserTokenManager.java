@@ -2,8 +2,17 @@
 import syntaxtree.*;
 import syntaxtree.Integer;
 import syntaxtree.visitor.*;
-import IRtree.IRVisitor;
+import IRtree.*;
 import mips.*;
+import utils.*;
+import temp.*;
+import canon.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Token Manager. */
 public class ParserTokenManager implements ParserConstants
